@@ -58,6 +58,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if numBytesParsed != 0 {
 			copy(buf, buf[numBytesParsed:])
 			readToIndex -= numBytesParsed
