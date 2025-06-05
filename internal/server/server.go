@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"sync/atomic"
+
+	"github.com/yanmoyy/httpfromtcp/internal/response"
 )
 
 // Contains the state of server
@@ -48,9 +50,12 @@ func (s *Server) listen() {
 }
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	data := "HTTP/1.1 200 OK\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"\r\n" +
-		"Hello World!\n"
-	_, _ = conn.Write([]byte(data))
+	err := response.WriteStatusLine(conn, response.StatusCodeSuccess)
+	if err != nil {
+		fmt.Printf("error: WriteStatusLine: %v\n", err)
+	}
+	headers := response.GetDefaultHeaders(0)
+	if err := response.WriteHeaders(conn, headers); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
