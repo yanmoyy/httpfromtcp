@@ -1,26 +1,30 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
 	"sync/atomic"
 
+	"github.com/yanmoyy/httpfromtcp/internal/request"
 	"github.com/yanmoyy/httpfromtcp/internal/response"
 )
 
 // Contains the state of server
 type Server struct {
+	handler  Handler
 	listener net.Listener
 	closed   atomic.Bool
 }
 
-func Serve(port int) (*Server, error) {
+func Serve(port int, handler Handler) (*Server, error) {
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
 	}
 	s := Server{
+		handler:  handler,
 		listener: l,
 	}
 	go s.listen()
@@ -50,12 +54,23 @@ func (s *Server) listen() {
 }
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	err := response.WriteStatusLine(conn, response.StatusCodeSuccess)
+	req, err := request.RequestFromReader(conn)
 	if err != nil {
-		fmt.Printf("error: WriteStatusLine: %v\n", err)
+		hErr := &HandlerError{
+			StatusCode: response.StatusCodeBadRequest,
+			Message:    err.Error(),
+		}
+		hErr.Write(conn)
 	}
-	headers := response.GetDefaultHeaders(0)
-	if err := response.WriteHeaders(conn, headers); err != nil {
-		fmt.Printf("error: %v\n", err)
+	buf := bytes.NewBuffer([]byte{})
+	hErr := s.handler(buf, req)
+	if hErr != nil {
+		hErr.Write(conn)
+		return
 	}
+	b := buf.Bytes()
+	_ = response.WriteStatusLine(conn, response.StatusCodeSuccess)
+	headers := response.GetDefaultHeaders(len(b))
+	_ = response.WriteHeaders(conn, headers)
+	_, _ = conn.Write(b)
 }
