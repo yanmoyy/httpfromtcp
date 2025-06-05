@@ -50,6 +50,11 @@ func (h Headers) Set(key, value string) {
 	h[key] = value
 }
 
+func (h Headers) Get(key string) (string, bool) {
+	v, ok := h[strings.ToLower(key)]
+	return v, ok
+}
+
 func validToken(data []byte) bool {
 	for _, c := range data {
 		if !isTokenChar(c) {
