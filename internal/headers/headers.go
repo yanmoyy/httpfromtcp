@@ -60,6 +60,10 @@ func (h Headers) Get(key string) (string, bool) {
 	return v, ok
 }
 
+func (h Headers) Remove(key string) {
+	key = strings.ToLower(key)
+	delete(h, key)
+}
 func validToken(data []byte) bool {
 	for _, c := range data {
 		if !isTokenChar(c) {
